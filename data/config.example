@@ -1,0 +1,17 @@
+hello = Hello World!
+[mqtt]
+cmd topic = topic/command
+dat topic = topic/data
+
+[wifi]
+ssid1 = WiFi_1_SSID
+ssid1 pass = WiFi_1_Password
+ssid2 = WiFi_2_SSID
+ssid2 pass = WiFi_2_Password
+ssid3 = WiFi_3_SSID
+ssid3 pass = WiFi_3_Password
+
+[net]
+ip = 192.168.1.23
+netmask = 255.255.255.0
+gateway = 192.168.1.1
