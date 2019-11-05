@@ -1,47 +1,112 @@
+#define DEBUGGERY
+
 #include <Wire.h>
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <SI7021.h>
 #include "FS.h"
 #include <SPIFFSIniFile.h>
+#include <PubSubClient.h>
 
 // Configuration for this build goes here...
 #include "CONFIG.h"
 #include "helpers.h"
 
-String SSID;
-String WiFiPass;
+char SSID[3][80] = {
+  "None\0",
+  "None\0",
+  "None\0",
+};
+char PASS[3][80] = {
+  "None\0",
+  "None\0",
+  "None\0",
+};
 
 bool ini_errord = true;
 
-char buffer[80];
+char buffer[80]; // Buffer to read the settings into.
 
 void printErrorMessage(uint8_t e, bool eol = true);
 
 SI7021 weather_sensor;
+
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(115200);
+  char ssid_i[6] = {'s', 's', 'i', 'd', 'X', '\0'};
+  char pass_i[11] = {'s', 's', 'i', 'd', '1', ' ', 'p', 'a', 's', 's', '\0'};
+// Read configuration from the /config file  
+  MSG_SERIAL("\n\n\n", "\n\n");
+  if(!SPIFFS.begin()) {
+    Serial.println("SPIFFS.begin() failed");
+  } else {
+    MSG_SERIAL("Config file found!", "\n");
+    ini_errord = false;
+  };
+  SPIFFSIniFile ini("/config");
+  // Open config file
+  if (!ini.open()){
+    ini_errord = true;
+    MSG_SERIAL("Config file not found: ", ini.getFilename());
+  } else {
+    MSG_SERIAL("Found config file: ", ini.getFilename());
+  };
+  // Check whether we can fit all the strings in the file into our buffer
+  if (!ini.validate(buffer, 80)) {
+    ini_errord = true;
+    MSG_SERIAL("String longer than 80 bytes in: ", ini.getFilename());
+  };
+  // Load SSIDs (all 3 of them!)
+  for (char i = 0; i < 3; i++)
+    {
+      MSG_SERIAL("Symbolo: ", char('1'+i));
+      ssid_i[4] = char('1'+i);
+      pass_i[4] = char('1'+i);
+      MSG_SERIAL("SSID key: ", ssid_i);
+      MSG_SERIAL("PASS key: ", pass_i);
+      if(ini.getValue("wifi", ssid_i, SSID[i], 80))
+        {
+          MSG_SERIAL("Read string: ", SSID[i]);
+        };
+      if(ini.getValue("wifi", pass_i, PASS[i], 80))
+        {
+          MSG_SERIAL("Read string: ", PASS[i]);
+        };
+      MSG_SERIAL("SSID: ", SSID[i]);
+      MSG_SERIAL("PASS: ", PASS[i]);
+    };
+  if(WiFi.status() != WL_CONNECTED)
+    {
+      for(char i = 0; (i < 3) && ( WiFi.status() != WL_CONNECTED ); i++)
+      {
+        char count = 0;
+        MSG_SERIAL("Iteration: ", i);
+        MSG_SERIAL("SSID: ", SSID[i]);
+        MSG_SERIAL("PASS: ", PASS[i]);
+        WiFi.begin(SSID[i], PASS[i]);
+        while((WiFi.status() != WL_CONNECTED)&&(count < 60))
+        {
+          delay(500);
+          Serial.print('.');
+          count++;
+        };
+        Serial.println("!");
+      };
+      if(WiFi.status() != WL_CONNECTED) {
+        Serial.println("Connection FAILED!");
+      } else {
+        Serial.println("Connected!");
+      };
+      WiFi.printDiag(Serial);
+    };
+  // WiFi.begin("network-name", "pass-to-network");
+  //read_ssid1;
+  //read_passwd1;
+  //connect;
+  // put your setup code here, to run once:
   weather_sensor.begin(D2,D1);
   int deviceid = weather_sensor.getDeviceId();
   MSG_SERIAL("Si 7021 device ID: ", deviceid);
-  while(!SPIFFS.begin())
-      Serial.println("SPIFFS.begin() failed");
-  SPIFFSIniFile ini("/config");
-  if (!ini.open()){
-    Serial.println(F("Config not found!"));
-  }else{
-    Serial.println(F("File NOT not found!"));
-  };
-  if (!ini.validate(buffer, 80)) {
-    Serial.println(F("Strings must be shorter than 80 characters"));
-  };
-  bool pogo = ini.getValue(NULL, "hello", buffer, 80);
-  if(!pogo){
-    ini_errord = true;
-  } else {
-    MSG_SERIAL("hello = ", buffer);
-  };
 }
 
 void loop() {
