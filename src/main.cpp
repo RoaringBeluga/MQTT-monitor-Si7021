@@ -98,12 +98,12 @@ void setup() {
         Serial.println("Connected!");
       };
       WiFi.printDiag(Serial);
+      if(WiFi.status() == WL_CONNECTED)
+      {
+        
+      };
     };
-  // WiFi.begin("network-name", "pass-to-network");
-  //read_ssid1;
-  //read_passwd1;
-  //connect;
-  // put your setup code here, to run once:
+
   weather_sensor.begin(D2,D1);
   int deviceid = weather_sensor.getDeviceId();
   MSG_SERIAL("Si 7021 device ID: ", deviceid);
